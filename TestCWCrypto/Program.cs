@@ -32,17 +32,25 @@ if (action.ToUpper() == "R")
     {
         Console.WriteLine("Enter packages, done with empty line:");
         List<Package> received = [];
-        while (true)
+        try
         {
-            string line = Console.ReadLine();
-            if (string.IsNullOrEmpty(line)) break;
-            string[] parts = line.Split(',');
-            int index = int.Parse(parts[0]);
-            byte[] data = Convert.FromBase64String(parts[1]);
-            byte[] signature = Convert.FromBase64String(parts[2]);
-            received.Add(new Package(index, data, signature));
+            while (true)
+            {
+                string line = Console.ReadLine();
+                if (string.IsNullOrEmpty(line)) break;
+                string[] parts = line.Split(',');
+                int index = int.Parse(parts[0]);
+                byte[] data = Convert.FromBase64String(parts[1]);
+                byte[] signature = Convert.FromBase64String(parts[2]);
+                received.Add(new Package(index, data, signature));
+            }
+            Console.WriteLine($"Received packages: {received.Count}");
         }
-        Console.WriteLine($"Received packages: {received.Count}");
+        catch
+        {
+            Console.WriteLine("Invalid input.");
+            continue;
+        }
 
         Console.WriteLine("Winnowing...");
         var wheat = received.Where(p => HMACHelper.Verify(privateKey, p.data, p.signature)).OrderBy(p => p.index).ToList();
@@ -93,19 +101,22 @@ for (int index = 0; index < numBlocks; index++)
     byte[] signature = HMACHelper.Sign(privateKey, block);
     packages.Add(new Package(index, block, signature));
 }
-Console.WriteLine($"Wheat packages: {packages.Count}");
+int packageCount = packages.Count;
+Console.WriteLine($"Wheat packages: {packageCount}");
 
 Console.WriteLine("Step 4: Adding Chaff Packages");
 var rand = new Random();
-int randNum = rand.Next(1, packages.Count + 1);
-for (int i = 0; i < randNum; i++)
+for (int i = 0; i < packageCount; i++)
 {
-    var randIndex = rand.Next(0, packages.Count);
-    var randData = new byte[BLOCK_SIZE];
-    RandomNumberGenerator.Fill(randData);
-    var randSignature = new byte[32];
-    RandomNumberGenerator.Fill(randSignature);
-    packages.Add(new Package(randIndex, randData, randSignature));
+    int randCount = rand.Next(1, 5);
+    for (int j = 0; j < randCount; j++)
+    {
+        var randData = new byte[BLOCK_SIZE];
+        RandomNumberGenerator.Fill(randData);
+        var randSignature = new byte[32];
+        RandomNumberGenerator.Fill(randSignature);
+        packages.Add(new Package(i, randData, randSignature));
+    }
 }
 var sendPkg = packages.OrderBy(p => p.index);
 
